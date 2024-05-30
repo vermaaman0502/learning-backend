@@ -43,9 +43,11 @@ const userSchema = new Schema(
                 ref: "Videos"
             }
         ],
-        refreshTokens: {
-            type: String,
-        }
+        refreshTokens: [
+            {
+                type: String,
+            }
+        ]
 
     },
     {
@@ -64,7 +66,7 @@ userSchema.methods.isPasswordCorrect = async function(password) {
 }
 
 userSchema.methods.generateAccessToken = async function() {
-    return jwt.sign(
+    return await jwt.sign(
         {
             _id : this._id,
             email: this.email,
@@ -79,7 +81,7 @@ userSchema.methods.generateAccessToken = async function() {
 }
 
 userSchema.methods.generateRefreshToken = async function() {
-    return jwt.sign(
+    return await jwt.sign(
         {
             _id : this._id,
         },

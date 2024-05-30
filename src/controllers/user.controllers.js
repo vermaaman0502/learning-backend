@@ -17,7 +17,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //get user detail from postman or frontend
     const {fullName, email, username, password} = req.body
-    console.log("email:", email)
+    // console.log("email:", email)
 
     
     //Validation, no field is empty
@@ -29,13 +29,13 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //validate, '@' is included in gmail
-    if (!email.include === "@") {
+    if (!email.includes("@")) {
         throw new ApiError(400, "@ is missing from email")
     }
 
 
     //check if user is already exist from MongoDB database
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{username}, {email}]
     })
     // console.log(existedUser);
@@ -43,10 +43,16 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exist")
     }
+    console.log(req.files);
 
     //check for images
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    
+
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage > 0) {
+        coverImageLocalPath = req.files?.coverImage[0]?.path
+    }
 
     
     //check for avatar, avatar is required
@@ -57,7 +63,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //upload them to cloudinary(avatar)
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null;
 
 
     if (!avatar) {
@@ -77,12 +83,15 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
 
+    //remove password and refresh token field from response
     const createdUser = await User.findById(user._id).select("-password -refreshTokens")
 
     if(!createdUser){
         throw new ApiError(500, "Something went wrong while registering user")
     }
 
+
+    //return response
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered successfully")
     )
